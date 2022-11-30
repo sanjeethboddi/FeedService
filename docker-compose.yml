@@ -1,0 +1,41 @@
+version: '3.1'
+services:
+    feed_service:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: feed_service
+        restart: unless-stopped
+        env_file: .env
+        ports:
+            - "80:80"
+            - "443:443"
+        depends_on:
+            - feed_mongodb
+        links:
+            - "feed_mongodb"
+        networks:
+            - backend
+
+    feed_mongodb:
+        image: mongo:4.0.3
+        container_name: feed_mongodb
+        restart: unless-stopped
+        volumes:
+            - "/tmp/mongo-feed-entrypoint/:/docker-entrypoint-initdb.d/"
+        ports:
+            - "27017:27017"
+        expose:
+            - "27017"
+        networks:
+            - backend
+
+
+networks:
+  backend:
+    driver: nn
+
+    
+    
+
+  
