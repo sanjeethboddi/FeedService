@@ -3,10 +3,26 @@ from dotenv import dotenv_values
 from pymongo import MongoClient
 from routes import router as book_router
 import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
 
 config = dotenv_values(".env")
 
 app = FastAPI()
+
+origins = [
+    "*",
+    "https://localhost.tiangolo.com",
+    "http://localhost",
+    "http://localhost:8080",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("startup")
 def startup_db_client():
@@ -16,6 +32,8 @@ def startup_db_client():
                 )
     app.database = app.mongodb_client[config["DB_NAME"]]
     print("Connected to the MongoDB database!")
+    app.auth_service = config["AUTH_SERVICE_URL"]
+    app.graph_service = config["GRAPH_SERVICE_URL"]
 
 @app.on_event("shutdown")
 def shutdown_db_client():
