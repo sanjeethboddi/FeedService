@@ -15,23 +15,27 @@ router = APIRouter()
 DB = "feed"
 
 @router.get("/getFeedForUser/{user_id}/{token}")
-def getFeedForUser(token:str, request:Request):
+def getFeedForUser(token:str, request:Request, response:Response, user_id:str):
     resp =  requests.post(request.app.auth_service+f"/verify/{token}")
     userID = str(resp.json()["username"]).lower()
-    if  resp.status_code != 200:
+    if  resp.status_code != 200 or userID != user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    response =  request.app.database[DB].find({"userID": userID})
+    response =  request.app.database[DB].find({"_id": userID})
     return [i for i in response]
 
-@router.patch("/updateFeedDataForFollowers/{userID}/{token}")
-def updateFeedDataForFollowers(token:str, userID:str, postID:str, request: Request):
+@router.patch("/updateFeedDataForFollowers/{userID}/{postID}/{token}")
+def updateFeedDataForFollowers(token:str, userID:str, postID:str, request: Request, response: Response):
+    print("Updating feed for followers")
     resp =  requests.post(request.app.auth_service+f"/verify/{token}")
     userID = str(resp.json()["username"]).lower()
     if  resp.status_code != 200:
         raise HTTPException(status_code=401, detail="Unauthorized")
     
-    followers = requests.get(request.app.graph_service + f"/getFollowersList/{userID}")
+    graph_response = requests.get(request.app.graph_service + f"/getFollowersList/{userID}")
+    followers = graph_response.json()
 
     for follower in followers:
-        request.app.database[DB].update_one({"userID": follower},{"$push": { "posts": { "$each": [postID], "$slice": 500, "$position": 0 }}})
+        print("Updating feed for follower: ", str(follower))
+        request.app.database[DB].update_one({"_id": follower},{"$push": { "posts": { "$each": [postID], "$slice": 500, "$position": 0 }}}, upsert=True)
+    
 
